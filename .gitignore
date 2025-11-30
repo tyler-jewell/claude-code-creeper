@@ -1,0 +1,22 @@
+# Dart/Flutter
+.dart_tool/
+.packages
+build/
+pubspec.lock
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code local files
+.claude/settings.local.json
+.claude/logs/*.log
+
+# Temporary files
+/tmp/
+*.tmp

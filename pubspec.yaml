@@ -1,0 +1,9 @@
+name: claude_code_creeper
+description: Self-improving Claude Code automation that learns from your sessions
+version: 0.1.0
+
+environment:
+  sdk: ^3.0.0
+
+executables:
+  creeper: creeper

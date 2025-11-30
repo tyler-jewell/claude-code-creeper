@@ -1,0 +1,10 @@
+{
+  "description": "Repeated on-demand command → slash command + CLAUDE.md table + CHANGELOG",
+  "transcript": "slash-command.jsonl",
+  "model": "haiku",
+  "verify": {
+    "command_created": true,
+    "claude_md_commands_table_updated": true,
+    "changelog_updated": true
+  }
+}

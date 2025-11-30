@@ -1,0 +1,291 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Claude Code Hooks Schema",
+  "version": "1.0.0",
+  "description": "Complete JSON schemas for Claude Code hook inputs and outputs",
+
+  "definitions": {
+    "CommonHookInput": {
+      "type": "object",
+      "description": "Fields present in ALL hook inputs",
+      "properties": {
+        "session_id": { "type": "string" },
+        "transcript_path": { "type": "string" },
+        "cwd": { "type": "string" },
+        "permission_mode": {
+          "type": "string",
+          "enum": ["default", "plan", "acceptEdits", "bypassPermissions"]
+        },
+        "hook_event_name": { "type": "string" }
+      },
+      "required": ["session_id", "transcript_path", "cwd", "permission_mode", "hook_event_name"]
+    },
+
+    "ToolInput": {
+      "type": "object",
+      "description": "Tool-specific input (varies by tool)",
+      "properties": {
+        "command": { "type": "string", "description": "For Bash tool" },
+        "file_path": { "type": "string", "description": "For Read/Edit/Write tools" },
+        "old_string": { "type": "string", "description": "For Edit tool" },
+        "new_string": { "type": "string", "description": "For Edit tool" },
+        "content": { "type": "string", "description": "For Write tool" },
+        "pattern": { "type": "string", "description": "For Glob/Grep tools" }
+      }
+    }
+  },
+
+  "hooks": {
+    "PreToolUse": {
+      "input": {
+        "allOf": [
+          { "$ref": "#/definitions/CommonHookInput" },
+          {
+            "properties": {
+              "tool_name": { "type": "string" },
+              "tool_input": { "$ref": "#/definitions/ToolInput" },
+              "tool_use_id": { "type": "string" }
+            },
+            "required": ["tool_name", "tool_input", "tool_use_id"]
+          }
+        ]
+      },
+      "output": {
+        "properties": {
+          "decision": { "enum": ["allow", "deny", "ask"] },
+          "reason": { "type": "string" },
+          "updatedInput": { "$ref": "#/definitions/ToolInput" }
+        }
+      },
+      "exitCodes": {
+        "0": "Success, stdout processed for JSON",
+        "2": "Blocking error, tool execution prevented"
+      }
+    },
+
+    "PostToolUse": {
+      "input": {
+        "allOf": [
+          { "$ref": "#/definitions/CommonHookInput" },
+          {
+            "properties": {
+              "tool_name": { "type": "string" },
+              "tool_input": { "$ref": "#/definitions/ToolInput" },
+              "tool_response": { "type": "object" },
+              "tool_use_id": { "type": "string" }
+            },
+            "required": ["tool_name", "tool_input", "tool_response", "tool_use_id"]
+          }
+        ]
+      },
+      "output": {
+        "properties": {
+          "decision": { "enum": ["block", "undefined"] },
+          "reason": { "type": "string" }
+        }
+      },
+      "exitCodes": {
+        "0": "Success, stdout processed for JSON",
+        "2": "Blocking error, tool result blocked"
+      }
+    },
+
+    "UserPromptSubmit": {
+      "input": {
+        "allOf": [
+          { "$ref": "#/definitions/CommonHookInput" },
+          {
+            "properties": {
+              "prompt": { "type": "string" }
+            },
+            "required": ["prompt"]
+          }
+        ]
+      },
+      "output": {
+        "properties": {
+          "decision": { "enum": ["block", "undefined"] },
+          "reason": { "type": "string" },
+          "additionalContext": { "type": "string", "description": "Context injected before prompt" }
+        }
+      },
+      "supportsContextInjection": true
+    },
+
+    "Stop": {
+      "input": {
+        "allOf": [
+          { "$ref": "#/definitions/CommonHookInput" },
+          {
+            "properties": {
+              "stop_hook_active": { "type": "boolean" }
+            },
+            "required": ["stop_hook_active"]
+          }
+        ]
+      },
+      "output": {
+        "properties": {
+          "decision": { "enum": ["block", "undefined"] },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+
+    "SubagentStop": {
+      "input": {
+        "allOf": [
+          { "$ref": "#/definitions/CommonHookInput" },
+          {
+            "properties": {
+              "stop_hook_active": { "type": "boolean" }
+            },
+            "required": ["stop_hook_active"]
+          }
+        ]
+      },
+      "output": {
+        "properties": {
+          "decision": { "enum": ["block", "undefined"] },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+
+    "PreCompact": {
+      "input": {
+        "allOf": [
+          { "$ref": "#/definitions/CommonHookInput" },
+          {
+            "properties": {
+              "trigger": { "enum": ["manual", "auto"] },
+              "custom_instructions": { "type": "string" }
+            },
+            "required": ["trigger"]
+          }
+        ]
+      },
+      "output": {
+        "properties": {
+          "continue": { "type": "boolean", "default": true },
+          "stopReason": { "type": "string" }
+        }
+      }
+    },
+
+    "SessionStart": {
+      "input": {
+        "allOf": [
+          { "$ref": "#/definitions/CommonHookInput" },
+          {
+            "properties": {
+              "source": { "enum": ["startup", "resume", "clear", "compact"] }
+            },
+            "required": ["source"]
+          }
+        ]
+      },
+      "output": {
+        "properties": {
+          "additionalContext": { "type": "string", "description": "Context injected at session start" }
+        }
+      },
+      "supportsContextInjection": true
+    },
+
+    "SessionEnd": {
+      "input": {
+        "allOf": [
+          { "$ref": "#/definitions/CommonHookInput" },
+          {
+            "properties": {
+              "reason": { "enum": ["clear", "logout", "prompt_input_exit", "other"] }
+            },
+            "required": ["reason"]
+          }
+        ]
+      },
+      "output": {}
+    },
+
+    "Notification": {
+      "input": {
+        "allOf": [
+          { "$ref": "#/definitions/CommonHookInput" },
+          {
+            "properties": {
+              "message": { "type": "string" },
+              "notification_type": {
+                "enum": ["permission_prompt", "idle_prompt", "auth_success", "elicitation_dialog"]
+              }
+            },
+            "required": ["message", "notification_type"]
+          }
+        ]
+      },
+      "output": {}
+    },
+
+    "PermissionRequest": {
+      "input": {
+        "$ref": "#/definitions/CommonHookInput"
+      },
+      "output": {
+        "properties": {
+          "behavior": { "enum": ["allow", "deny"] },
+          "updatedInput": { "$ref": "#/definitions/ToolInput" },
+          "message": { "type": "string" },
+          "interrupt": { "type": "boolean" }
+        },
+        "required": ["behavior"]
+      }
+    }
+  },
+
+  "transcriptEvent": {
+    "description": "Structure of events in .jsonl transcript files",
+    "types": {
+      "user": {
+        "properties": {
+          "type": { "const": "user" },
+          "message": {
+            "properties": {
+              "role": { "const": "user" },
+              "content": { "oneOf": [
+                { "type": "string" },
+                { "type": "array", "items": { "$ref": "#/transcriptEvent/toolResult" } }
+              ]}
+            }
+          }
+        }
+      },
+      "assistant": {
+        "properties": {
+          "type": { "const": "assistant" },
+          "message": {
+            "properties": {
+              "role": { "const": "assistant" },
+              "content": { "type": "array", "items": { "$ref": "#/transcriptEvent/toolUse" } }
+            }
+          }
+        }
+      },
+      "toolUse": {
+        "properties": {
+          "type": { "const": "tool_use" },
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "input": { "type": "object" }
+        }
+      },
+      "toolResult": {
+        "properties": {
+          "type": { "const": "tool_result" },
+          "tool_use_id": { "type": "string" },
+          "content": { "type": "string" },
+          "is_error": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}
