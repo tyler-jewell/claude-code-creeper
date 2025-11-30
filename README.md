@@ -27,6 +27,12 @@ This runs in the background and:
 5. **Opens a PR** for your review
 6. **Cleans up** and waits before creeping again
 
+### Stop the Daemon
+
+```bash
+claude-code-creeper stop
+```
+
 ### Check Status
 
 See what the creeper has been up to:
@@ -45,7 +51,7 @@ claude-code-creeper start [OPTIONS]
   --wait <duration>    Time between analysis cycles (default: 10m)
   --auto-apply         Skip PRs, apply changes directly (use with caution)
   --dry-run            Analyze only, don't make changes
-  --model <model>      Claude model to use (default: sonnet)
+  --model <model>      Claude model to use (default: haiku)
 ```
 
 ## How It Works

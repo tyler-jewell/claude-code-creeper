@@ -12,12 +12,14 @@
 - [x] Dependabot for dependency updates
 - [x] Codecov integration
 
-## In Progress
+## Completed (v0.2.0)
 
-- [ ] Background daemon mode (`start` command)
-- [ ] Git worktree isolation for changes
-- [ ] Automatic PR creation
-- [ ] Status reporting (`creep` command)
+- [x] Background daemon mode (`start`/`stop` commands)
+- [x] Git worktree isolation for changes
+- [x] Automatic PR creation via `gh` CLI
+- [x] Status reporting (`creep` command)
+- [x] State persistence (`~/.claude-creeper/`)
+- [x] Duration parsing for `--wait` flag (10m, 1h, 30s)
 
 ## Pre-Release Checklist
 

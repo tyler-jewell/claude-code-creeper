@@ -2,23 +2,26 @@
 
 /// Claude Creeper CLI
 ///
-/// Watches codebase changes and asks Claude to optimize .claude/ configuration.
+/// Self-improving automation daemon for Claude Code.
 ///
 /// Usage:
-///   dart run bin/creeper.dart [command] [options]
+///   creeper [command] [options] [project-path]
 ///
 /// Commands:
-///   watch             Watch for changes and auto-analyze (default)
+///   start             Start the daemon (default)
+///   stop              Stop the running daemon
+///   creep             Show status and pending improvements
 ///   test              Run single analysis with provided migration
 ///   replay            Replay migrations from baseline
 ///   reset             Hard reset to baseline (requires --confirm)
 ///
 /// Options:
-///   --interval=N      Minutes to wait after changes before analysis (default: 10)
-///   --auto-apply      Apply changes automatically (default: plan mode)
+///   --wait=DURATION   Time between analysis cycles (default: 10m)
+///                     Examples: 10m, 1h, 30s
+///   --auto-apply      Apply changes directly (skip worktree/PR)
+///   --dry-run         Analyze only, don't make changes
+///   --model=MODEL     Claude model to use (default: haiku)
 ///   --migration=PATH  Path to migration .jsonl file (for test command)
-///   --dry-run         Show prompts without running Claude
-///   --model=MODEL     Model to use (overrides migration default)
 ///   --to=N            Replay up to migration N
 ///   --only=N          Run only migration N
 ///   --confirm         Skip confirmation prompts
@@ -30,13 +33,13 @@ import 'dart:io';
 
 import 'package:claude_code_creeper/creeper.dart';
 
-const defaultIntervalMinutes = 10;
+const defaultWaitDuration = Duration(minutes: 10);
 
 late Directory projectDir;
 late Directory claudeProjectsDir;
 late String creeperSessionId;
 
-int intervalMinutes = defaultIntervalMinutes;
+Duration waitDuration = defaultWaitDuration;
 bool autoApply = false;
 String? migrationPath;
 bool dryRun = false;
@@ -44,6 +47,20 @@ String? model;
 int? replayTo;
 int? replayOnly;
 bool confirm = false;
+
+/// Parse duration string like "10m", "1h", "30s"
+Duration _parseDuration(String input) {
+  final match = RegExp(r'^(\d+)(s|m|h)$').firstMatch(input.toLowerCase());
+  if (match == null) return defaultWaitDuration;
+
+  final value = int.parse(match.group(1)!);
+  return switch (match.group(2)) {
+    's' => Duration(seconds: value),
+    'm' => Duration(minutes: value),
+    'h' => Duration(hours: value),
+    _ => defaultWaitDuration,
+  };
+}
 
 Timer? analysisTimer;
 bool isAnalyzing = false;
@@ -56,12 +73,12 @@ final List<String> pendingChanges = [];
 
 void main(List<String> args) async {
   var projectPath = Directory.current.path;
-  var command = 'watch';
+  var command = 'start';
 
   // Parse command (first non-flag arg)
   for (final arg in args) {
     if (!arg.startsWith('-')) {
-      if (['watch', 'test', 'replay', 'reset'].contains(arg)) {
+      if (['start', 'stop', 'creep', 'test', 'replay', 'reset'].contains(arg)) {
         command = arg;
       } else {
         projectPath = arg;
@@ -71,9 +88,8 @@ void main(List<String> args) async {
 
   // Parse flags
   for (final arg in args) {
-    if (arg.startsWith('--interval=')) {
-      intervalMinutes =
-          int.tryParse(arg.split('=')[1]) ?? defaultIntervalMinutes;
+    if (arg.startsWith('--wait=')) {
+      waitDuration = _parseDuration(arg.split('=')[1]);
     } else if (arg == '--auto-apply') {
       autoApply = true;
     } else if (arg.startsWith('--migration=')) {
@@ -103,6 +119,12 @@ void main(List<String> args) async {
   }
 
   switch (command) {
+    case 'start':
+      await _runStartMode();
+    case 'stop':
+      await _runStopMode();
+    case 'creep':
+      await _runCreepMode();
     case 'test':
       if (migrationPath == null) {
         print('Error: test requires --migration=<path>');
@@ -113,9 +135,6 @@ void main(List<String> args) async {
       await _runReplayMode();
     case 'reset':
       await _runResetMode();
-    case 'watch':
-    default:
-      await _runWatchMode();
   }
 }
 
@@ -175,15 +194,16 @@ Future<void> _runTestMode() async {
   await creeper.runAnalysis(context);
 }
 
-/// Run in watch mode
-Future<void> _runWatchMode() async {
+/// Run in start mode (daemon)
+Future<void> _runStartMode() async {
   // Generate session ID
   creeperSessionId = _generateSessionId();
 
+  final waitStr = _formatDuration(waitDuration);
   print('Claude Creeper started');
   print('Watching: ${projectDir.path}');
-  print('Analysis delay: $intervalMinutes minutes after changes');
-  print('Auto-apply: ${autoApply ? 'enabled' : 'disabled (plan mode)'}');
+  print('Analysis delay: $waitStr after changes');
+  print('Auto-apply: ${autoApply ? 'enabled' : 'disabled (PR mode)'}');
   print('Session: $creeperSessionId');
   print('');
   print('Press Ctrl+C to stop\n');
@@ -193,6 +213,104 @@ Future<void> _runWatchMode() async {
 
   // Watch for changes
   await _watchForChanges();
+}
+
+/// Format duration for display
+String _formatDuration(Duration d) {
+  if (d.inHours > 0) return '${d.inHours}h';
+  if (d.inMinutes > 0) return '${d.inMinutes}m';
+  return '${d.inSeconds}s';
+}
+
+/// Run stop mode - stop the daemon
+Future<void> _runStopMode() async {
+  final status = await DaemonService.status();
+
+  if (!status.running) {
+    print('No daemon is running');
+    exit(0);
+  }
+
+  print('Stopping daemon (PID: ${status.pid})...');
+  final stopped = await DaemonService.stop();
+
+  if (stopped) {
+    print('Daemon stopped');
+  } else {
+    print('Failed to stop daemon');
+    exit(1);
+  }
+}
+
+/// Run creep mode - show status
+Future<void> _runCreepMode() async {
+  print('Claude Creeper Status');
+  print('=' * 50);
+
+  // Check daemon status
+  final status = await DaemonService.status();
+
+  if (status.running) {
+    print('Daemon: running (PID ${status.pid})');
+    if (status.uptime != null) print('Uptime: ${status.uptime}');
+    if (status.projectPath != null) print('Watching: ${status.projectPath}');
+    if (status.waitDuration != null) {
+      print('Interval: ${_formatDuration(status.waitDuration!)}');
+    }
+    print('Mode: ${status.autoApply ? 'auto-apply' : 'PR mode'}');
+  } else {
+    print('Daemon: not running');
+  }
+
+  print('');
+
+  // Load project state
+  final projectState = await StateService.loadProjectState(projectDir.path);
+
+  if (projectState != null) {
+    if (projectState.lastAnalysis != null) {
+      print('Last analysis: ${_timeAgo(projectState.lastAnalysis!)}');
+    }
+
+    if (projectState.pending.isNotEmpty) {
+      print('');
+      print('Pending Improvements:');
+      for (var i = 0; i < projectState.pending.length; i++) {
+        final p = projectState.pending[i];
+        print('  ${i + 1}. [${p.type}] ${p.description}');
+        if (p.prUrl != null) print('     PR: ${p.prUrl}');
+      }
+    }
+
+    // Load recent history
+    final history = await StateService.loadHistory(projectDir.path, limit: 5);
+    if (history.isNotEmpty) {
+      print('');
+      print('Recent Activity:');
+      for (final record in history) {
+        final ago = _timeAgo(record.timestamp);
+        final changes = record.changesApplied.length;
+        final patterns = record.patternsDetected.length;
+        print('  • $ago: $patterns patterns, $changes changes');
+      }
+    }
+  } else {
+    print('No analysis history for this project');
+  }
+
+  print('');
+  if (!status.running) {
+    print("Run 'creeper start' to begin watching.");
+  }
+}
+
+/// Format time difference as human-readable string
+String _timeAgo(DateTime dt) {
+  final diff = DateTime.now().difference(dt);
+  if (diff.inDays > 0) return '${diff.inDays} day(s) ago';
+  if (diff.inHours > 0) return '${diff.inHours} hour(s) ago';
+  if (diff.inMinutes > 0) return '${diff.inMinutes} minute(s) ago';
+  return 'just now';
 }
 
 String _generateSessionId() {
@@ -225,6 +343,7 @@ bool _shouldIgnore(String path) {
   final ignorePaths = [
     '.git/',
     '.dart_tool/',
+    '.creeper-work/',
     'build/',
     '.flutter-plugins',
     '.packages',
@@ -244,13 +363,12 @@ Future<void> _watchForChanges() async {
 
     if (changes.isNotEmpty && !isAnalyzing) {
       pendingChanges.addAll(changes);
-      print(
-        '${changes.length} file(s) changed - analysis in $intervalMinutes min',
-      );
+      final waitStr = _formatDuration(waitDuration);
+      print('${changes.length} file(s) changed - analysis in $waitStr');
 
       // Reset/start the timer
       analysisTimer?.cancel();
-      analysisTimer = Timer(Duration(minutes: intervalMinutes), _runAnalysis);
+      analysisTimer = Timer(waitDuration, _runAnalysis);
     }
   }
 }
@@ -287,6 +405,11 @@ Future<void> _runAnalysis() async {
   print('Running analysis - ${DateTime.now()}');
   print('${'=' * 60}\n');
 
+  final absProjectPath = projectDir.absolute.path;
+  final patternsDetected = <String>[];
+  final changesApplied = <String>[];
+  String? transcriptHash;
+
   try {
     final config = CreeperConfig(
       projectPath: projectDir.path,
@@ -302,6 +425,7 @@ Future<void> _runAnalysis() async {
     String? transcriptContent;
     if (transcriptPath != null) {
       transcriptContent = await File(transcriptPath).readAsString();
+      transcriptHash = transcriptPath.split('/').last;
     }
 
     final context = await creeper.gatherContext(
@@ -309,9 +433,49 @@ Future<void> _runAnalysis() async {
       transcriptContent: transcriptContent,
     );
 
+    // Extract patterns for state tracking
+    final analysis = context.transcriptAnalysis;
+    if (analysis != null) {
+      if (analysis.userDirectives.isNotEmpty) {
+        patternsDetected.add('${analysis.userDirectives.length} user directives');
+      }
+      final repeatedBash =
+          analysis.bashCommands.entries.where((e) => e.value >= 3).length;
+      if (repeatedBash > 0) {
+        patternsDetected.add('$repeatedBash repeated commands');
+      }
+      if (analysis.errors.isNotEmpty) {
+        patternsDetected.add('${analysis.errors.length} errors');
+      }
+    }
+
     await creeper.runAnalysis(context);
+
+    // TODO: Parse Claude output to determine actual changes made
+    // For now, just log that analysis ran
+    changesApplied.add('Analysis completed');
   } catch (e) {
     print('Error during analysis: $e');
+    patternsDetected.add('Error: $e');
+  }
+
+  // Save analysis record
+  try {
+    final record = AnalysisRecord(
+      timestamp: DateTime.now(),
+      transcriptHash: transcriptHash ?? 'no-transcript',
+      patternsDetected: patternsDetected,
+      changesApplied: changesApplied,
+    );
+    await StateService.appendHistory(absProjectPath, record);
+
+    // Update project state
+    final existingState = await StateService.loadProjectState(absProjectPath);
+    final newState = (existingState ?? ProjectState(projectPath: absProjectPath))
+        .copyWith(lastAnalysis: DateTime.now());
+    await StateService.saveProjectState(newState);
+  } catch (e) {
+    print('Error saving state: $e');
   }
 
   // Clear pending changes
@@ -321,22 +485,50 @@ Future<void> _runAnalysis() async {
   print('\nWatching for changes...\n');
 }
 
+/// Find the most recent Claude Code transcript for the current project
+///
+/// Claude Code stores transcripts in ~/.claude/projects/<hash>/<session>.jsonl
+/// where <hash> is derived from the absolute project path.
 Future<String?> _findRecentTranscript() async {
   if (!claudeProjectsDir.existsSync()) return null;
 
   try {
+    // Get the absolute path for the project
+    final absProjectPath = projectDir.absolute.path;
+
+    // Look for transcripts in all project directories
+    // We check all because we might not know Claude's exact hashing algorithm
     File? mostRecent;
     DateTime? mostRecentTime;
+
+    // Load project state to check last analysis time
+    final projectState = await StateService.loadProjectState(absProjectPath);
+    final lastAnalysis = projectState?.lastAnalysis;
 
     await for (final dir in claudeProjectsDir.list()) {
       if (dir is Directory) {
         await for (final file in dir.list()) {
           if (file is File && file.path.endsWith('.jsonl')) {
             final stat = await file.stat();
-            if (mostRecentTime == null ||
-                stat.modified.isAfter(mostRecentTime)) {
-              mostRecent = file;
-              mostRecentTime = stat.modified;
+
+            // Skip if older than last analysis (already processed)
+            if (lastAnalysis != null && stat.modified.isBefore(lastAnalysis)) {
+              continue;
+            }
+
+            // Check if this transcript is for our project
+            // Read first few lines to look for project path indicators
+            final isForProject = await _transcriptIsForProject(
+              file,
+              absProjectPath,
+            );
+
+            if (isForProject) {
+              if (mostRecentTime == null ||
+                  stat.modified.isAfter(mostRecentTime)) {
+                mostRecent = file;
+                mostRecentTime = stat.modified;
+              }
             }
           }
         }
@@ -346,6 +538,38 @@ Future<String?> _findRecentTranscript() async {
     return mostRecent?.path;
   } catch (_) {
     return null;
+  }
+}
+
+/// Check if a transcript file is for the given project
+Future<bool> _transcriptIsForProject(File file, String projectPath) async {
+  try {
+    // Read first 20 lines to look for project indicators
+    final lines = await file
+        .openRead()
+        .transform(const SystemEncoding().decoder)
+        .transform(const LineSplitter())
+        .take(20)
+        .toList();
+
+    for (final line in lines) {
+      if (line.trim().isEmpty) continue;
+
+      // Look for working directory or file paths that match project
+      if (line.contains(projectPath)) {
+        return true;
+      }
+
+      // Also check for project name in paths
+      final projectName = projectPath.split('/').last;
+      if (line.contains('/$projectName/')) {
+        return true;
+      }
+    }
+
+    return false;
+  } catch (_) {
+    return false;
   }
 }
 

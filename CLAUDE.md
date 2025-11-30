@@ -14,10 +14,12 @@ dart analyze                    # Static analysis
 dart test                       # Run tests
 dart test --coverage-path=coverage/lcov.info  # Run tests with coverage
 
-# Run creeper
-dart run bin/creeper.dart watch /path/to/project          # Watch mode
-dart run bin/creeper.dart test --transcript=FILE PROJECT  # Single analysis
+# Run creeper (development)
+dart run bin/creeper.dart start /path/to/project          # Start daemon
+dart run bin/creeper.dart stop                            # Stop daemon
+dart run bin/creeper.dart creep                           # Check status
 dart run bin/creeper.dart test --migration=FILE PROJECT   # Test migration
+dart run bin/creeper.dart replay PROJECT                  # Replay all migrations
 ```
 
 ## Slash Commands
