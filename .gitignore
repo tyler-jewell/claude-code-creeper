@@ -3,6 +3,7 @@
 .packages
 build/
 pubspec.lock
+coverage/
 
 # IDE
 .idea/
