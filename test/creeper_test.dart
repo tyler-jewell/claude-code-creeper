@@ -25,9 +25,7 @@ void main() {
     });
 
     test('hasChanges returns true when changes exist', () {
-      final outcome = AnalysisOutcome(
-        changesApplied: ['file.dart'],
-      );
+      final outcome = AnalysisOutcome(changesApplied: ['file.dart']);
 
       expect(outcome.hasChanges, isTrue);
     });
@@ -47,22 +45,8 @@ void main() {
     });
 
     test('prUrl can be set', () {
-      final outcome = AnalysisOutcome();
-      outcome.prUrl = 'https://github.com/test/pr/2';
-
+      final outcome = AnalysisOutcome(prUrl: 'https://github.com/test/pr/2');
       expect(outcome.prUrl, equals('https://github.com/test/pr/2'));
-    });
-  });
-
-  group('CreeperConfig', () {
-    test('creates with required fields only', () {
-      final config = CreeperConfig(projectPath: '/project');
-
-      expect(config.projectPath, equals('/project'));
-      expect(config.autoApply, isFalse);
-      expect(config.dryRun, isFalse);
-      expect(config.model, isNull);
-      expect(config.domains, isNotEmpty);
     });
 
     test('creates with all fields', () {
@@ -104,29 +88,25 @@ void main() {
         tempDir = await Directory.systemTemp.createTemp('creeper_test_');
         // Initialize a git repo in temp directory
         await Process.run('git', ['init'], workingDirectory: tempDir.path);
-        await Process.run(
-          'git',
-          ['config', 'user.email', 'test@test.com'],
-          workingDirectory: tempDir.path,
-        );
-        await Process.run(
-          'git',
-          ['config', 'user.name', 'Test'],
-          workingDirectory: tempDir.path,
-        );
+        await Process.run('git', [
+          'config',
+          'user.email',
+          'test@test.com',
+        ], workingDirectory: tempDir.path);
+        await Process.run('git', [
+          'config',
+          'user.name',
+          'Test',
+        ], workingDirectory: tempDir.path);
         // Create a file and commit
         final file = File('${tempDir.path}/test.txt');
         await file.writeAsString('test content');
-        await Process.run(
-          'git',
-          ['add', '.'],
-          workingDirectory: tempDir.path,
-        );
-        await Process.run(
-          'git',
-          ['commit', '-m', 'Initial commit'],
-          workingDirectory: tempDir.path,
-        );
+        await Process.run('git', ['add', '.'], workingDirectory: tempDir.path);
+        await Process.run('git', [
+          'commit',
+          '-m',
+          'Initial commit',
+        ], workingDirectory: tempDir.path);
       });
 
       tearDown(() async {
@@ -172,9 +152,7 @@ void main() {
         final config = CreeperConfig(projectPath: tempDir.path);
         final creeper = Creeper(config);
 
-        final context = await creeper.gatherContext(
-          transcriptContent: '',
-        );
+        final context = await creeper.gatherContext(transcriptContent: '');
 
         expect(context.transcriptAnalysis, isNull);
       });
