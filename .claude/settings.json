@@ -1,7 +1,83 @@
 {
-  "hooks": {},
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "apiKeyHelper": "",
+  "awsCredentialExport": "",
+  "awsAuthRefresh": "",
+  "cleanupPeriodDays": 30,
+  "env": {},
+  "includeCoAuthoredBy": true,
   "permissions": {
-    "allow": [],
-    "deny": []
-  }
+    "allow": [
+      "Bash(dart:*)",
+      "Bash(git:*)",
+      "Read",
+      "Glob",
+      "Grep"
+    ],
+    "deny": [],
+    "ask": [],
+    "defaultMode": "default",
+    "disableBypassPermissionsMode": false,
+    "additionalDirectories": []
+  },
+  "model": "",
+  "enableAllProjectMcpServers": false,
+  "enabledMcpjsonServers": [],
+  "disabledMcpjsonServers": [],
+  "allowedMcpServers": [],
+  "deniedMcpServers": [],
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && dart fix --apply"
+          },
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && dart analyze"
+          },
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && dart test --coverage-path=coverage/lcov.info -r failures-only;awk -F: '/^LF/{f+=$2}/^LH/{h+=$2}END{if(f)printf\"Coverage: %d/%d (%.1f%%)\\n\",h,f,h*100/f}' \"$CLAUDE_PROJECT_DIR/coverage/lcov.info\""
+          }
+        ]
+      }
+    ]
+  },
+  "disableAllHooks": false,
+  "statusLine": {
+    "type": "command",
+    "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/statusline.sh",
+    "padding": 0
+  },
+  "enabledPlugins": {},
+  "extraKnownMarketplaces": {},
+  "skippedMarketplaces": [],
+  "skippedPlugins": [],
+  "forceLoginMethod": "",
+  "forceLoginOrgUUID": "",
+  "otelHeadersHelper": "",
+  "outputStyle": "",
+  "skipWebFetchPreflight": false,
+  "sandbox": {
+    "enabled": false,
+    "ignoreViolations": false,
+    "excludedCommands": [],
+    "autoAllowBashIfSandboxed": false,
+    "enableWeakerNestedSandbox": false,
+    "allowUnsandboxedCommands": [],
+    "network": {
+      "allowUnixSockets": false,
+      "allowLocalBinding": false,
+      "httpProxyPort": 0,
+      "socksProxyPort": 0
+    }
+  },
+  "spinnerTipsEnabled": true,
+  "alwaysThinkingEnabled": false,
+  "companyAnnouncements": [],
+  "pluginConfigs": {}
 }

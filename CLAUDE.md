@@ -1,15 +1,54 @@
 # CLAUDE.md
 
-Self-improving Claude Code automation system.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Tech Stack
-- Dart CLI application
-- Claude Code API
+## Overview
+
+Self-improving Claude Code automation system. Creeper watches Claude Code sessions and optimizes `.claude/` configuration based on observed patterns.
 
 ## Commands
+
+```bash
+dart pub get                    # Install dependencies
+dart analyze                    # Static analysis
+dart test                       # Run tests
+dart test --coverage-path=coverage/lcov.info  # Run tests with coverage
+
+# Run creeper
+dart run bin/creeper.dart watch /path/to/project          # Watch mode
+dart run bin/creeper.dart test --transcript=FILE PROJECT  # Single analysis
+dart run bin/creeper.dart test --migration=FILE PROJECT   # Test migration
+```
+
+## Slash Commands
+
 | Command | Purpose |
 |---------|---------|
+| `/hard-reset` | Reset example project to baseline state |
+| `/verify-migrations` | Run static analysis and verify migrations |
 
-## Important Reminders
+## Architecture
 
-(none yet)
+**Domain-based analysis system:**
+- `lib/creeper.dart` - Main orchestration, `Creeper` class runs domains against `AnalysisContext`
+- `lib/domains/domain.dart` - Base `CreeperDomain` interface with `shouldActivate()` and `analyze()`
+- `lib/domains/claude_code_automation/domain.dart` - Claude Code optimization domain
+
+**Transcript parsing:**
+- `lib/models/transcript_types.dart` - Sealed class hierarchy for Claude Code transcript events (UserEvent, AssistantEvent, SystemEvent, ResultEvent)
+- `TranscriptAnalysis.fromEvents()` - Extracts tool usage, bash commands, errors, user directives
+
+**Constants:**
+- `lib/utils/constants.dart` - Default model, file extensions, retry limits
+
+## Migration Format
+
+Each migration is a `.jsonl` file in `example/.claude/migrations/`:
+- **Line 1**: Metadata with `_migration`, `description`, `model`, `verify` fields
+- **Lines 2+**: Transcript events for replay
+
+## Development Notes
+
+- Test migrations against `example/` directory, not main project
+- The `example/` directory simulates a real project that creeper would optimize
+- PostToolUse hooks run dart fix, analyze, and test on every Edit/Write

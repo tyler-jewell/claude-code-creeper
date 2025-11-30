@@ -1,8 +1,0 @@
-{"type":"user","message":{"role":"user","content":"Check for outdated packages"}}
-{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"1","name":"Bash","input":{"command":"flutter pub outdated"}}]}}
-{"type":"user","message":{"role":"user","content":"What packages need updating?"}}
-{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"2","name":"Bash","input":{"command":"flutter pub outdated"}}]}}
-{"type":"user","message":{"role":"user","content":"Show me outdated deps again"}}
-{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"3","name":"Bash","input":{"command":"flutter pub outdated"}}]}}
-{"type":"user","message":{"role":"user","content":"Any updates available?"}}
-{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"4","name":"Bash","input":{"command":"flutter pub outdated"}}]}}

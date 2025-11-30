@@ -9,16 +9,16 @@
 ///
 /// Commands:
 ///   watch             Watch for changes and auto-analyze (default)
-///   test              Run single analysis with provided transcript
+///   test              Run single analysis with provided migration
 ///   replay            Replay migrations from baseline
 ///   reset             Hard reset to baseline (requires --confirm)
 ///
 /// Options:
 ///   --interval=N      Minutes to wait after changes before analysis (default: 10)
 ///   --auto-apply      Apply changes automatically (default: plan mode)
-///   --transcript=PATH Path to transcript file (required with test)
+///   --migration=PATH  Path to migration .jsonl file (for test command)
 ///   --dry-run         Show prompts without running Claude
-///   --model=MODEL     Model to use (default: sonnet)
+///   --model=MODEL     Model to use (overrides migration default)
 ///   --to=N            Replay up to migration N
 ///   --only=N          Run only migration N
 ///   --confirm         Skip confirmation prompts
@@ -38,7 +38,7 @@ late String creeperSessionId;
 
 int intervalMinutes = defaultIntervalMinutes;
 bool autoApply = false;
-String? testTranscriptPath;
+String? migrationPath;
 bool dryRun = false;
 String? model;
 int? replayTo;
@@ -75,8 +75,8 @@ void main(List<String> args) async {
       intervalMinutes = int.tryParse(arg.split('=')[1]) ?? defaultIntervalMinutes;
     } else if (arg == '--auto-apply') {
       autoApply = true;
-    } else if (arg.startsWith('--transcript=')) {
-      testTranscriptPath = arg.split('=')[1];
+    } else if (arg.startsWith('--migration=')) {
+      migrationPath = arg.split('=')[1];
     } else if (arg == '--dry-run') {
       dryRun = true;
     } else if (arg.startsWith('--model=')) {
@@ -103,8 +103,8 @@ void main(List<String> args) async {
 
   switch (command) {
     case 'test':
-      if (testTranscriptPath == null) {
-        print('Error: test requires --transcript=<path>');
+      if (migrationPath == null) {
+        print('Error: test requires --migration=<path>');
         exit(1);
       }
       await _runTestMode();
@@ -118,11 +118,39 @@ void main(List<String> args) async {
   }
 }
 
-/// Run in test mode with provided transcript
+/// Parse a migration .jsonl file
+/// First line = metadata, remaining lines = transcript
+Future<MigrationData> _parseMigration(String path) async {
+  final file = File(path);
+  final lines = await file.readAsLines();
+
+  if (lines.isEmpty) {
+    throw Exception('Migration file is empty: $path');
+  }
+
+  // First line is metadata
+  final metadata = jsonDecode(lines.first) as Map<String, dynamic>;
+
+  // Remaining lines are transcript
+  final transcriptLines = lines.skip(1).where((l) => l.trim().isNotEmpty).toList();
+
+  return MigrationData(
+    description: metadata['description'] as String? ?? 'Unknown',
+    model: metadata['model'] as String? ?? 'haiku',
+    verify: metadata['verify'] as Map<String, dynamic>? ?? {},
+    transcriptContent: transcriptLines.join('\n'),
+  );
+}
+
+/// Run in test mode with provided migration
 Future<void> _runTestMode() async {
+  final migration = await _parseMigration(migrationPath!);
+
   print('Claude Creeper TEST MODE');
   print('Project: ${projectDir.path}');
-  print('Transcript: $testTranscriptPath');
+  print('Migration: $migrationPath');
+  print('Description: ${migration.description}');
+  print('Model: ${model ?? migration.model}');
   print('Auto-apply: ${autoApply ? 'enabled' : 'disabled'}');
   print('Dry-run: ${dryRun ? 'enabled' : 'disabled'}');
   print('');
@@ -131,13 +159,13 @@ Future<void> _runTestMode() async {
     projectPath: projectDir.path,
     autoApply: autoApply,
     dryRun: dryRun,
-    model: model,
+    model: model ?? migration.model,
   );
 
   final creeper = Creeper(config);
 
   final context = await creeper.gatherContext(
-    transcriptPath: testTranscriptPath,
+    transcriptContent: migration.transcriptContent,
   );
 
   await creeper.runAnalysis(context);
@@ -194,7 +222,6 @@ bool _shouldIgnore(String path) {
     '.flutter-plugins',
     '.packages',
     'node_modules/',
-    '.claude/creeper',
     'pubspec.lock',
     'coverage/',
   ];
@@ -260,10 +287,14 @@ Future<void> _runAnalysis() async {
 
     // Find most recent transcript
     final transcriptPath = await _findRecentTranscript();
+    String? transcriptContent;
+    if (transcriptPath != null) {
+      transcriptContent = await File(transcriptPath).readAsString();
+    }
 
     final context = await creeper.gatherContext(
       changedFiles: pendingChanges.toSet().toList(),
-      transcriptPath: transcriptPath,
+      transcriptContent: transcriptContent,
     );
 
     await creeper.runAnalysis(context);
@@ -305,37 +336,25 @@ Future<String?> _findRecentTranscript() async {
   }
 }
 
-/// Run reset mode - hard reset to baseline
+/// Run reset mode - use the script
 Future<void> _runResetMode() async {
-  final resetScript = File('${projectDir.path}/.claude/ai_automation_scripts/hard-reset-claude-code.sh');
-  if (!resetScript.existsSync()) {
-    print('Error: hard-reset-claude-code.sh not found');
-    exit(1);
-  }
-
-  final args = confirm ? ['--confirm'] : <String>[];
-  final result = await Process.run('bash', [resetScript.path, ...args],
-      workingDirectory: projectDir.path);
-
-  stdout.write(result.stdout);
-  stderr.write(result.stderr);
-  exit(result.exitCode);
+  print('Use: .claude/scripts/hard-reset.sh');
+  exit(0);
 }
 
 /// Run replay mode - replay migrations sequentially
 Future<void> _runReplayMode() async {
-  final migrationsDir = Directory('${projectDir.path}/.claude/creeper/migrations');
-  final transcriptsDir = Directory('${projectDir.path}/.claude/creeper/transcripts');
+  final migrationsDir = Directory('${projectDir.path}/.claude/migrations');
 
   if (!migrationsDir.existsSync()) {
-    print('Error: No migrations directory found');
+    print('Error: No migrations directory found at ${migrationsDir.path}');
     exit(1);
   }
 
-  // Get migration files (skip baseline.json)
+  // Get migration files (.jsonl only)
   final migrations = await migrationsDir
       .list()
-      .where((f) => f.path.endsWith('.json') && !f.path.contains('baseline.json'))
+      .where((f) => f.path.endsWith('.jsonl'))
       .map((f) => f as File)
       .toList();
 
@@ -349,7 +368,7 @@ Future<void> _runReplayMode() async {
 
   print('Claude Creeper REPLAY MODE');
   print('Project: ${projectDir.path}');
-  print('Model: ${model ?? 'haiku'}');
+  print('Model: ${model ?? '(from migration)'}');
   print('Dry-run: ${dryRun ? 'enabled' : 'disabled'}');
   print('Auto-apply: enabled (required for replay)');
   print('');
@@ -376,28 +395,14 @@ Future<void> _runReplayMode() async {
 
   // Run each migration sequentially
   for (final migrationFile in toRun) {
-    final content = await migrationFile.readAsString();
-    final migration = jsonDecode(content) as Map<String, dynamic>;
-
-    final description = migration['description'] as String? ?? 'Unknown';
-    final transcriptName = migration['transcript'] as String?;
-    final migrationModel = migration['model'] as String? ?? model ?? 'haiku';
+    final migration = await _parseMigration(migrationFile.path);
+    final migrationModel = model ?? migration.model;
 
     print('=' * 60);
     print('Migration: ${migrationFile.uri.pathSegments.last}');
-    print('Description: $description');
+    print('Description: ${migration.description}');
+    print('Model: $migrationModel');
     print('=' * 60);
-
-    if (transcriptName == null) {
-      print('Skipping: No transcript defined');
-      continue;
-    }
-
-    final transcriptPath = '${transcriptsDir.path}/$transcriptName';
-    if (!File(transcriptPath).existsSync()) {
-      print('Error: Transcript not found: $transcriptPath');
-      continue;
-    }
 
     final config = CreeperConfig(
       projectPath: projectDir.path,
@@ -409,7 +414,7 @@ Future<void> _runReplayMode() async {
     final creeper = Creeper(config);
 
     final context = await creeper.gatherContext(
-      transcriptPath: transcriptPath,
+      transcriptContent: migration.transcriptContent,
     );
 
     await creeper.runAnalysis(context);
@@ -424,4 +429,19 @@ int? _extractMigrationNumber(String path) {
   final filename = path.split('/').last;
   final match = RegExp(r'^(\d+)-').firstMatch(filename);
   return match != null ? int.tryParse(match.group(1)!) : null;
+}
+
+/// Migration data parsed from .jsonl file
+class MigrationData {
+  final String description;
+  final String model;
+  final Map<String, dynamic> verify;
+  final String transcriptContent;
+
+  MigrationData({
+    required this.description,
+    required this.model,
+    required this.verify,
+    required this.transcriptContent,
+  });
 }

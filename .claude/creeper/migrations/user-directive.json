@@ -1,9 +1,0 @@
-{
-  "description": "User directives → CLAUDE.md reminders + CHANGELOG",
-  "transcript": "user-directive.jsonl",
-  "model": "haiku",
-  "verify": {
-    "claude_md_contains": ["NEVER", "vendor/", "ALWAYS", "flutter analyze"],
-    "changelog_updated": true
-  }
-}

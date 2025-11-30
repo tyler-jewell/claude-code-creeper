@@ -85,9 +85,8 @@ class ClaudeCodeAutomationDomain implements CreeperDomain {
       }
 
       // Repeated Bash commands (automation opportunity)
-      final repeatedBash = analysis.bashCommands.entries
-          .where((e) => e.value >= 3)
-          .toList();
+      final repeatedBash =
+          analysis.bashCommands.entries.where((e) => e.value >= 3).toList();
       if (repeatedBash.isNotEmpty) {
         buffer.writeln('\n## REPEATED BASH COMMANDS (Automation Opportunity):');
         buffer.writeln(

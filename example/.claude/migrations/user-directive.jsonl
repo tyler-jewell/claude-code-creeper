@@ -1,3 +1,4 @@
+{"_migration":true,"description":"User directives → CLAUDE.md reminders + CHANGELOG","model":"haiku","verify":{"claude_md_contains":["NEVER","vendor/","ALWAYS","flutter analyze"],"changelog_updated":true}}
 {"type":"user","message":{"role":"user","content":"Help me fix this auth bug"}}
 {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"1","name":"Edit","input":{"file_path":"lib/auth.dart"}}]}}
 {"type":"user","message":{"role":"user","content":"NEVER edit files in the vendor/ directory - those are third party. Also ALWAYS run flutter analyze before commits."}}

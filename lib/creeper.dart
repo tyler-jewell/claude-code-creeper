@@ -8,6 +8,7 @@ export 'models/hook_types.dart';
 export 'models/transcript_types.dart';
 export 'domains/domain.dart';
 export 'domains/claude_code_automation/domain.dart';
+export 'utils/constants.dart';
 
 import 'dart:io';
 
@@ -41,7 +42,7 @@ class Creeper {
   /// Gather context for analysis
   Future<AnalysisContext> gatherContext({
     List<String>? changedFiles,
-    String? transcriptPath,
+    String? transcriptContent,
   }) async {
     final projectDir = Directory(config.projectPath);
 
@@ -71,13 +72,9 @@ class Creeper {
 
     // Analyze transcript if provided
     TranscriptAnalysis? transcriptAnalysis;
-    if (transcriptPath != null) {
-      final file = File(transcriptPath);
-      if (file.existsSync()) {
-        final content = await file.readAsString();
-        final events = TranscriptEvent.parseTranscript(content);
-        transcriptAnalysis = TranscriptAnalysis.fromEvents(events);
-      }
+    if (transcriptContent != null && transcriptContent.isNotEmpty) {
+      final events = TranscriptEvent.parseTranscript(transcriptContent);
+      transcriptAnalysis = TranscriptAnalysis.fromEvents(events);
     }
 
     return AnalysisContext(
