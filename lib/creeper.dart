@@ -4,26 +4,20 @@
 
 library creeper;
 
-export 'models/hook_types.dart';
-export 'models/transcript_types.dart';
-export 'domains/domain.dart';
-export 'domains/claude_code_automation/domain.dart';
-export 'utils/constants.dart';
-
 import 'dart:io';
 
-import 'models/transcript_types.dart';
-import 'domains/domain.dart';
 import 'domains/claude_code_automation/domain.dart';
+import 'domains/domain.dart';
+import 'models/transcript_types.dart';
+
+export 'domains/claude_code_automation/domain.dart';
+export 'domains/domain.dart';
+export 'models/hook_types.dart';
+export 'models/transcript_types.dart';
+export 'utils/constants.dart';
 
 /// Creeper configuration
 class CreeperConfig {
-  final String projectPath;
-  final bool autoApply;
-  final bool dryRun;
-  final String? model;
-  final List<CreeperDomain> domains;
-
   CreeperConfig({
     required this.projectPath,
     this.autoApply = false,
@@ -31,13 +25,17 @@ class CreeperConfig {
     this.model,
     List<CreeperDomain>? domains,
   }) : domains = domains ?? [ClaudeCodeAutomationDomain()];
+  final String projectPath;
+  final bool autoApply;
+  final bool dryRun;
+  final String? model;
+  final List<CreeperDomain> domains;
 }
 
 /// Main creeper class
 class Creeper {
-  final CreeperConfig config;
-
   Creeper(this.config);
+  final CreeperConfig config;
 
   /// Gather context for analysis
   Future<AnalysisContext> gatherContext({
@@ -49,11 +47,12 @@ class Creeper {
     // Get git log
     String? recentCommits;
     try {
-      final result = await Process.run(
-        'git',
-        ['log', '--oneline', '-15', '--no-decorate'],
-        workingDirectory: projectDir.path,
-      );
+      final result = await Process.run('git', [
+        'log',
+        '--oneline',
+        '-15',
+        '--no-decorate',
+      ], workingDirectory: projectDir.path);
       recentCommits = result.stdout.toString().trim();
       if (recentCommits.isEmpty) recentCommits = null;
     } catch (_) {}
@@ -61,11 +60,11 @@ class Creeper {
     // Get git diff stat
     String? recentDiffStat;
     try {
-      final result = await Process.run(
-        'git',
-        ['diff', '--stat', 'HEAD~3'],
-        workingDirectory: projectDir.path,
-      );
+      final result = await Process.run('git', [
+        'diff',
+        '--stat',
+        'HEAD~3',
+      ], workingDirectory: projectDir.path);
       recentDiffStat = result.stdout.toString().trim();
       if (recentDiffStat.isEmpty) recentDiffStat = null;
     } catch (_) {}
@@ -141,10 +140,7 @@ class Creeper {
     }
 
     // Allowed tools
-    args.addAll([
-      '--allowed-tools',
-      result.allowedTools.join(','),
-    ]);
+    args.addAll(['--allowed-tools', result.allowedTools.join(',')]);
 
     // Model
     final model = config.model ?? result.recommendedModel ?? 'sonnet';

@@ -1,9 +1,11 @@
 name: claude_code_creeper
 description: Self-improving Claude Code automation that learns from your sessions
 version: 0.1.0
+repository: https://github.com/tylerjewell/claude-code-creeper
+issue_tracker: https://github.com/tylerjewell/claude-code-creeper/issues
 
 environment:
-  sdk: ^3.0.0
+  sdk: ^3.10.0
 
 dev_dependencies:
   lints: ^4.0.0

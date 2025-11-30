@@ -52,3 +52,7 @@ Each migration is a `.jsonl` file in `example/.claude/migrations/`:
 - Test migrations against `example/` directory, not main project
 - The `example/` directory simulates a real project that creeper would optimize
 - PostToolUse hooks run dart fix, analyze, and test on every Edit/Write
+
+## Roadmap
+
+See [ROADMAP.md](./ROADMAP.md) for pre-release checklist and future plans.

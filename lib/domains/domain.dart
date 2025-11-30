@@ -8,12 +8,6 @@ import '../models/transcript_types.dart';
 
 /// Context gathered for analysis
 class AnalysisContext {
-  final List<String> changedFiles;
-  final String? recentCommits;
-  final String? recentDiffStat;
-  final TranscriptAnalysis? transcriptAnalysis;
-  final String projectPath;
-
   AnalysisContext({
     required this.changedFiles,
     this.recentCommits,
@@ -21,21 +15,25 @@ class AnalysisContext {
     this.transcriptAnalysis,
     required this.projectPath,
   });
+  final List<String> changedFiles;
+  final String? recentCommits;
+  final String? recentDiffStat;
+  final TranscriptAnalysis? transcriptAnalysis;
+  final String projectPath;
 }
 
 /// Result of domain analysis
 class AnalysisResult {
-  final String userPrompt;
-  final String systemPromptAppend;
-  final List<String> allowedTools;
-  final String? recommendedModel;
-
   AnalysisResult({
     required this.userPrompt,
     required this.systemPromptAppend,
     this.allowedTools = const ['Read', 'Edit', 'Write', 'Glob', 'Grep', 'Bash'],
     this.recommendedModel,
   });
+  final String userPrompt;
+  final String systemPromptAppend;
+  final List<String> allowedTools;
+  final String? recommendedModel;
 }
 
 /// Abstract domain interface

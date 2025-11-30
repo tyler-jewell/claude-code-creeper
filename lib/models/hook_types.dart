@@ -18,12 +18,8 @@ enum PermissionMode {
   const PermissionMode(this.value);
   final String value;
 
-  static PermissionMode fromString(String value) {
-    return PermissionMode.values.firstWhere(
-      (e) => e.value == value,
-      orElse: () => PermissionMode.defaultMode,
-    );
-  }
+  static PermissionMode fromString(String value) =>
+      values.firstWhere((e) => e.value == value, orElse: () => .defaultMode);
 }
 
 /// Hook event types
@@ -42,12 +38,10 @@ enum HookEventType {
   const HookEventType(this.value);
   final String value;
 
-  static HookEventType fromString(String value) {
-    return HookEventType.values.firstWhere(
-      (e) => e.value == value,
-      orElse: () => throw ArgumentError('Unknown hook event: $value'),
-    );
-  }
+  static HookEventType fromString(String value) => values.firstWhere(
+    (e) => e.value == value,
+    orElse: () => throw ArgumentError('Unknown hook event: $value'),
+  );
 }
 
 /// Session start sources
@@ -60,12 +54,8 @@ enum SessionStartSource {
   const SessionStartSource(this.value);
   final String value;
 
-  static SessionStartSource fromString(String value) {
-    return SessionStartSource.values.firstWhere(
-      (e) => e.value == value,
-      orElse: () => SessionStartSource.startup,
-    );
-  }
+  static SessionStartSource fromString(String value) =>
+      values.firstWhere((e) => e.value == value, orElse: () => .startup);
 }
 
 /// Session end reasons
@@ -78,12 +68,8 @@ enum SessionEndReason {
   const SessionEndReason(this.value);
   final String value;
 
-  static SessionEndReason fromString(String value) {
-    return SessionEndReason.values.firstWhere(
-      (e) => e.value == value,
-      orElse: () => SessionEndReason.other,
-    );
-  }
+  static SessionEndReason fromString(String value) =>
+      values.firstWhere((e) => e.value == value, orElse: () => .other);
 }
 
 /// PreCompact trigger types
@@ -94,12 +80,8 @@ enum PreCompactTrigger {
   const PreCompactTrigger(this.value);
   final String value;
 
-  static PreCompactTrigger fromString(String value) {
-    return PreCompactTrigger.values.firstWhere(
-      (e) => e.value == value,
-      orElse: () => PreCompactTrigger.auto,
-    );
-  }
+  static PreCompactTrigger fromString(String value) =>
+      values.firstWhere((e) => e.value == value, orElse: () => .auto);
 }
 
 /// Notification types
@@ -112,12 +94,10 @@ enum NotificationType {
   const NotificationType(this.value);
   final String value;
 
-  static NotificationType fromString(String value) {
-    return NotificationType.values.firstWhere(
-      (e) => e.value == value,
-      orElse: () => NotificationType.permissionPrompt,
-    );
-  }
+  static NotificationType fromString(String value) => values.firstWhere(
+    (e) => e.value == value,
+    orElse: () => .permissionPrompt,
+  );
 }
 
 // =============================================================================
@@ -126,12 +106,6 @@ enum NotificationType {
 
 /// Common fields present in all hook inputs
 class CommonHookInput {
-  final String sessionId;
-  final String transcriptPath;
-  final String cwd;
-  final PermissionMode permissionMode;
-  final String hookEventName;
-
   CommonHookInput({
     required this.sessionId,
     required this.transcriptPath,
@@ -140,29 +114,25 @@ class CommonHookInput {
     required this.hookEventName,
   });
 
-  factory CommonHookInput.fromJson(Map<String, dynamic> json) {
-    return CommonHookInput(
-      sessionId: json['session_id'] as String? ?? '',
-      transcriptPath: json['transcript_path'] as String? ?? '',
-      cwd: json['cwd'] as String? ?? '',
-      permissionMode: PermissionMode.fromString(
-        json['permission_mode'] as String? ?? 'default',
-      ),
-      hookEventName: json['hook_event_name'] as String? ?? '',
-    );
-  }
+  factory CommonHookInput.fromJson(Map<String, dynamic> json) =>
+      CommonHookInput(
+        sessionId: json['session_id'] as String? ?? '',
+        transcriptPath: json['transcript_path'] as String? ?? '',
+        cwd: json['cwd'] as String? ?? '',
+        permissionMode: PermissionMode.fromString(
+          json['permission_mode'] as String? ?? 'default',
+        ),
+        hookEventName: json['hook_event_name'] as String? ?? '',
+      );
+  final String sessionId;
+  final String transcriptPath;
+  final String cwd;
+  final PermissionMode permissionMode;
+  final String hookEventName;
 }
 
 /// Tool input structure (varies by tool type)
 class ToolInput {
-  final String? command;
-  final String? filePath;
-  final String? oldString;
-  final String? newString;
-  final String? content;
-  final String? pattern;
-  final Map<String, dynamic> raw;
-
   ToolInput({
     this.command,
     this.filePath,
@@ -173,27 +143,28 @@ class ToolInput {
     required this.raw,
   });
 
-  factory ToolInput.fromJson(Map<String, dynamic> json) {
-    return ToolInput(
-      command: json['command'] as String?,
-      filePath: json['file_path'] as String?,
-      oldString: json['old_string'] as String?,
-      newString: json['new_string'] as String?,
-      content: json['content'] as String?,
-      pattern: json['pattern'] as String?,
-      raw: json,
-    );
-  }
+  factory ToolInput.fromJson(Map<String, dynamic> json) => ToolInput(
+    command: json['command'] as String?,
+    filePath: json['file_path'] as String?,
+    oldString: json['old_string'] as String?,
+    newString: json['new_string'] as String?,
+    content: json['content'] as String?,
+    pattern: json['pattern'] as String?,
+    raw: json,
+  );
+  final String? command;
+  final String? filePath;
+  final String? oldString;
+  final String? newString;
+  final String? content;
+  final String? pattern;
+  final Map<String, dynamic> raw;
 
   Map<String, dynamic> toJson() => raw;
 }
 
 /// PreToolUse hook input
 class PreToolUseInput extends CommonHookInput {
-  final String toolName;
-  final ToolInput toolInput;
-  final String toolUseId;
-
   PreToolUseInput({
     required super.sessionId,
     required super.transcriptPath,
@@ -220,15 +191,13 @@ class PreToolUseInput extends CommonHookInput {
       toolUseId: json['tool_use_id'] as String? ?? '',
     );
   }
+  final String toolName;
+  final ToolInput toolInput;
+  final String toolUseId;
 }
 
 /// PostToolUse hook input
 class PostToolUseInput extends CommonHookInput {
-  final String toolName;
-  final ToolInput toolInput;
-  final Map<String, dynamic> toolResponse;
-  final String toolUseId;
-
   PostToolUseInput({
     required super.sessionId,
     required super.transcriptPath,
@@ -257,12 +226,14 @@ class PostToolUseInput extends CommonHookInput {
       toolUseId: json['tool_use_id'] as String? ?? '',
     );
   }
+  final String toolName;
+  final ToolInput toolInput;
+  final Map<String, dynamic> toolResponse;
+  final String toolUseId;
 }
 
 /// UserPromptSubmit hook input
 class UserPromptSubmitInput extends CommonHookInput {
-  final String prompt;
-
   UserPromptSubmitInput({
     required super.sessionId,
     required super.transcriptPath,
@@ -283,12 +254,11 @@ class UserPromptSubmitInput extends CommonHookInput {
       prompt: json['prompt'] as String? ?? '',
     );
   }
+  final String prompt;
 }
 
 /// SessionStart hook input
 class SessionStartInput extends CommonHookInput {
-  final SessionStartSource source;
-
   SessionStartInput({
     required super.sessionId,
     required super.transcriptPath,
@@ -309,12 +279,11 @@ class SessionStartInput extends CommonHookInput {
       source: SessionStartSource.fromString(json['source'] as String? ?? ''),
     );
   }
+  final SessionStartSource source;
 }
 
 /// SessionEnd hook input
 class SessionEndInput extends CommonHookInput {
-  final SessionEndReason reason;
-
   SessionEndInput({
     required super.sessionId,
     required super.transcriptPath,
@@ -335,13 +304,11 @@ class SessionEndInput extends CommonHookInput {
       reason: SessionEndReason.fromString(json['reason'] as String? ?? ''),
     );
   }
+  final SessionEndReason reason;
 }
 
 /// PreCompact hook input
 class PreCompactInput extends CommonHookInput {
-  final PreCompactTrigger trigger;
-  final String? customInstructions;
-
   PreCompactInput({
     required super.sessionId,
     required super.transcriptPath,
@@ -364,12 +331,12 @@ class PreCompactInput extends CommonHookInput {
       customInstructions: json['custom_instructions'] as String?,
     );
   }
+  final PreCompactTrigger trigger;
+  final String? customInstructions;
 }
 
 /// Stop/SubagentStop hook input
 class StopHookInput extends CommonHookInput {
-  final bool stopHookActive;
-
   StopHookInput({
     required super.sessionId,
     required super.transcriptPath,
@@ -390,13 +357,11 @@ class StopHookInput extends CommonHookInput {
       stopHookActive: json['stop_hook_active'] as bool? ?? false,
     );
   }
+  final bool stopHookActive;
 }
 
 /// Notification hook input
 class NotificationInput extends CommonHookInput {
-  final String message;
-  final NotificationType notificationType;
-
   NotificationInput({
     required super.sessionId,
     required super.transcriptPath,
@@ -421,4 +386,6 @@ class NotificationInput extends CommonHookInput {
       ),
     );
   }
+  final String message;
+  final NotificationType notificationType;
 }

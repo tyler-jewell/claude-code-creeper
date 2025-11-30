@@ -22,10 +22,7 @@ class ClaudeCodeAutomationDomain implements CreeperDomain {
       'Optimizes .claude/ configuration based on session patterns';
 
   @override
-  bool shouldActivate(AnalysisContext context) {
-    // Always active - this is the primary domain
-    return true;
-  }
+  bool shouldActivate(AnalysisContext context) => true;
 
   @override
   AnalysisResult analyze(AnalysisContext context) {
@@ -41,11 +38,10 @@ class ClaudeCodeAutomationDomain implements CreeperDomain {
   }
 
   String _buildUserPrompt(AnalysisContext context) {
-    final buffer = StringBuffer();
-
-    buffer.writeln('CREEPER ANALYSIS REQUEST');
-    buffer.writeln('========================');
-    buffer.writeln('Domain: $name\n');
+    final buffer = StringBuffer()
+      ..writeln('CREEPER ANALYSIS REQUEST')
+      ..writeln('========================')
+      ..writeln('Domain: $name\n');
 
     // Changed files
     if (context.changedFiles.isNotEmpty) {
@@ -61,16 +57,18 @@ class ClaudeCodeAutomationDomain implements CreeperDomain {
 
     // Recent commits
     if (context.recentCommits != null) {
-      buffer.writeln('## Recent Commits:');
-      buffer.writeln(context.recentCommits);
-      buffer.writeln();
+      buffer
+        ..writeln('## Recent Commits:')
+        ..writeln(context.recentCommits)
+        ..writeln();
     }
 
     // Diff stat
     if (context.recentDiffStat != null) {
-      buffer.writeln('## Recent Changes Summary:');
-      buffer.writeln(context.recentDiffStat);
-      buffer.writeln();
+      buffer
+        ..writeln('## Recent Changes Summary:')
+        ..writeln(context.recentDiffStat)
+        ..writeln();
     }
 
     // Transcript analysis
@@ -85,13 +83,15 @@ class ClaudeCodeAutomationDomain implements CreeperDomain {
       }
 
       // Repeated Bash commands (automation opportunity)
-      final repeatedBash =
-          analysis.bashCommands.entries.where((e) => e.value >= 3).toList();
+      final repeatedBash = analysis.bashCommands.entries
+          .where((e) => e.value >= 3)
+          .toList();
       if (repeatedBash.isNotEmpty) {
-        buffer.writeln('\n## REPEATED BASH COMMANDS (Automation Opportunity):');
-        buffer.writeln(
-          'These commands were run 3+ times and should be considered for automation:',
-        );
+        buffer
+          ..writeln('\n## REPEATED BASH COMMANDS (Automation Opportunity):')
+          ..writeln(
+            'These commands were run 3+ times and should be considered for automation:',
+          );
         for (final cmd in repeatedBash) {
           buffer.writeln('- `${cmd.key}` (${cmd.value} times)');
         }
@@ -100,10 +100,11 @@ class ClaudeCodeAutomationDomain implements CreeperDomain {
 
       // User directives (highest priority)
       if (analysis.userDirectives.isNotEmpty) {
-        buffer.writeln('\n## USER DIRECTIVES (HIGH PRIORITY):');
-        buffer.writeln(
-          'The user expressed these strong preferences that should be added to CLAUDE.md:',
-        );
+        buffer
+          ..writeln('\n## USER DIRECTIVES (HIGH PRIORITY):')
+          ..writeln(
+            'The user expressed these strong preferences that should be added to CLAUDE.md:',
+          );
         for (final d in analysis.userDirectives) {
           buffer.writeln('- "$d"');
         }
@@ -128,16 +129,16 @@ class ClaudeCodeAutomationDomain implements CreeperDomain {
       buffer.writeln();
     }
 
-    buffer.writeln('---');
-    buffer.writeln(
-      'Analyze this context and improve the .claude/ configuration as needed.',
-    );
+    buffer
+      ..writeln('---')
+      ..writeln(
+        'Analyze this context and improve the .claude/ configuration as needed.',
+      );
 
     return buffer.toString();
   }
 
-  String _buildSystemPrompt() {
-    return '''
+  String _buildSystemPrompt() => r'''
 
 ## CREEPER MODE INSTRUCTIONS - Claude Code Automation Domain
 
@@ -196,8 +197,8 @@ If CLAUDE.md references files/commands that don't exist:
 ```bash
 #!/bin/bash
 set -euo pipefail
-INPUT=\$(cat)
-FILE_PATH=\$(echo "\$INPUT" | jq -r '.tool_input.file_path // empty')
+INPUT=$(cat)
+FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
 # Your logic here
 exit 0  # 0=success, 2=block with message
 ```
@@ -275,5 +276,4 @@ You MUST use the Write/Edit tools to make changes. Do NOT output recommendations
 
 NEVER skip CHANGELOG.md updates - this is tracked and required!
 ''';
-  }
 }

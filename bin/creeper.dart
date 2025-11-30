@@ -72,7 +72,8 @@ void main(List<String> args) async {
   // Parse flags
   for (final arg in args) {
     if (arg.startsWith('--interval=')) {
-      intervalMinutes = int.tryParse(arg.split('=')[1]) ?? defaultIntervalMinutes;
+      intervalMinutes =
+          int.tryParse(arg.split('=')[1]) ?? defaultIntervalMinutes;
     } else if (arg == '--auto-apply') {
       autoApply = true;
     } else if (arg.startsWith('--migration=')) {
@@ -132,7 +133,10 @@ Future<MigrationData> _parseMigration(String path) async {
   final metadata = jsonDecode(lines.first) as Map<String, dynamic>;
 
   // Remaining lines are transcript
-  final transcriptLines = lines.skip(1).where((l) => l.trim().isNotEmpty).toList();
+  final transcriptLines = lines
+      .skip(1)
+      .where((l) => l.trim().isNotEmpty)
+      .toList();
 
   return MigrationData(
     description: metadata['description'] as String? ?? 'Unknown',
@@ -204,7 +208,10 @@ String _generateSessionId() {
 Future<void> _scanFiles() async {
   fileModTimes.clear();
 
-  await for (final entity in projectDir.list(recursive: true, followLinks: false)) {
+  await for (final entity in projectDir.list(
+    recursive: true,
+    followLinks: false,
+  )) {
     if (entity is File && !_shouldIgnore(entity.path)) {
       try {
         final stat = await entity.stat();
@@ -237,7 +244,9 @@ Future<void> _watchForChanges() async {
 
     if (changes.isNotEmpty && !isAnalyzing) {
       pendingChanges.addAll(changes);
-      print('${changes.length} file(s) changed - analysis in $intervalMinutes min');
+      print(
+        '${changes.length} file(s) changed - analysis in $intervalMinutes min',
+      );
 
       // Reset/start the timer
       analysisTimer?.cancel();
@@ -249,7 +258,10 @@ Future<void> _watchForChanges() async {
 Future<List<String>> _detectChanges() async {
   final changes = <String>[];
 
-  await for (final entity in projectDir.list(recursive: true, followLinks: false)) {
+  await for (final entity in projectDir.list(
+    recursive: true,
+    followLinks: false,
+  )) {
     if (entity is File && !_shouldIgnore(entity.path)) {
       try {
         final stat = await entity.stat();
@@ -321,7 +333,8 @@ Future<String?> _findRecentTranscript() async {
         await for (final file in dir.list()) {
           if (file is File && file.path.endsWith('.jsonl')) {
             final stat = await file.stat();
-            if (mostRecentTime == null || stat.modified.isAfter(mostRecentTime)) {
+            if (mostRecentTime == null ||
+                stat.modified.isAfter(mostRecentTime)) {
               mostRecent = file;
               mostRecentTime = stat.modified;
             }
@@ -433,15 +446,17 @@ int? _extractMigrationNumber(String path) {
 
 /// Migration data parsed from .jsonl file
 class MigrationData {
-  final String description;
-  final String model;
-  final Map<String, dynamic> verify;
-  final String transcriptContent;
-
   MigrationData({
     required this.description,
     required this.model,
     required this.verify,
     required this.transcriptContent,
   });
+  final String description;
+  final String model;
+
+  /// Verification data from migration format (reserved for future use)
+  // ignore: unreachable_from_main
+  final Map<String, dynamic> verify;
+  final String transcriptContent;
 }

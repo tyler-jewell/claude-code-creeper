@@ -1,6 +1,6 @@
-import 'package:test/test.dart';
-import 'package:claude_code_creeper/utils/constants.dart';
 import 'package:claude_code_creeper/models/transcript_types.dart';
+import 'package:claude_code_creeper/utils/constants.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('constants have expected values', () {

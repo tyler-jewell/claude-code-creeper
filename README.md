@@ -1,130 +1,74 @@
 # Claude Code Creeper
 
-Self-improving Claude Code automation that learns from your sessions and optimizes your `.claude/` configuration.
+A self-improving automation daemon for Claude Code. Creeper watches your coding sessions, learns patterns, and automatically optimizes your `.claude/` configuration—hooks, commands, skills, and settings—by creating PRs you can review.
 
-## What is Creeper?
+Built on Dart and the Claude Code SDK. Nothing else.
 
-Creeper is a meta-agent that watches your Claude Code sessions and automatically:
-
-- **Learns your preferences** - Extracts user directives ("NEVER", "ALWAYS") and adds them to CLAUDE.md
-- **Automates repeated tasks** - Detects frequently used commands and creates slash commands or hooks
-- **Maintains configuration** - Keeps CLAUDE.md, settings.json, and CHANGELOG.md in sync
-- **Tests itself** - Includes a migration verification system with parallel worktree testing
-
-## Quick Start
+## Install
 
 ```bash
-# Clone the repo
-git clone https://github.com/tyler-jewell/claude-code-creeper.git
-cd claude-code-creeper
-
-# Install dependencies
-dart pub get
-
-# Run in watch mode (monitors your project for changes)
-dart run bin/creeper.dart watch /path/to/your/project
-
-# Or run a single analysis with a transcript
-dart run bin/creeper.dart test --transcript=/path/to/transcript.jsonl /path/to/project
+dart pub global activate claude_code_creeper
 ```
 
-## Commands
+## Usage
 
-| Command | Description |
-|---------|-------------|
-| `watch` | Watch for changes and auto-analyze (default) |
-| `test` | Run single analysis with provided transcript |
-| `replay` | Replay migrations from baseline |
-| `reset` | Hard reset to baseline (requires --confirm) |
+Start the creeper daemon:
 
-## Options
+```bash
+claude-code-creeper start --wait 10m
+```
 
-| Option | Description |
-|--------|-------------|
-| `--interval=N` | Minutes to wait after changes before analysis (default: 10) |
-| `--auto-apply` | Apply changes automatically (default: plan mode) |
-| `--transcript=PATH` | Path to transcript file (required with test) |
-| `--dry-run` | Show prompts without running Claude |
-| `--model=MODEL` | Model to use (default: sonnet) |
-| `--confirm` | Skip confirmation prompts |
+This runs in the background and:
+
+1. **Watches** your Claude Code sessions for patterns
+2. **Detects** opportunities to improve automation (repeated commands, user directives, common errors)
+3. **Creates a worktree** to isolate changes
+4. **Implements** improvements with full testing and documentation
+5. **Opens a PR** for your review
+6. **Cleans up** and waits before creeping again
+
+### Check Status
+
+See what the creeper has been up to:
+
+```bash
+claude-code-creeper creep
+```
+
+Returns a human-readable (and Claude Code agent-friendly) summary of recent analysis, changes, and pending improvements.
+
+### Options
+
+```bash
+claude-code-creeper start [OPTIONS]
+
+  --wait <duration>    Time between analysis cycles (default: 10m)
+  --auto-apply         Skip PRs, apply changes directly (use with caution)
+  --dry-run            Analyze only, don't make changes
+  --model <model>      Claude model to use (default: sonnet)
+```
 
 ## How It Works
 
-### Domain Architecture
+Creeper analyzes your Claude Code transcripts to find:
 
-Creeper uses a domain-based architecture for extensibility:
+- **Repeated commands** → Creates hooks to automate them
+- **User directives** ("NEVER do X", "ALWAYS do Y") → Adds to CLAUDE.md
+- **Common errors** → Creates validation hooks to prevent them
+- **Workflow patterns** → Generates slash commands and skills
 
-```
-lib/
-├── creeper.dart           # Main library
-├── domains/
-│   ├── domain.dart        # Base domain interface
-│   └── claude_code_automation/
-│       └── domain.dart    # Claude Code optimization domain
-├── models/
-│   ├── hook_types.dart    # Claude Code hook type definitions
-│   └── transcript_types.dart  # Transcript parsing
-└── schemas/
-    └── claude_code_hooks_schema.json  # JSON schema for hooks
-```
+All changes go through PRs so you stay in control.
 
-### Migration System
+## Example
 
-Creeper includes a rewindable migration system for testing:
+You've been running `dart fix --apply && dart analyze` after every edit. Creeper notices this pattern and:
 
-```
-.claude/creeper/
-├── migrations/
-│   ├── baseline.json       # Clean slate configuration
-│   ├── user-directive.json # Test: user directives → CLAUDE.md
-│   └── slash-command.json  # Test: repeated commands → slash commands
-└── transcripts/
-    ├── user-directive.jsonl
-    └── slash-command.jsonl
-```
+1. Creates `.claude/hooks/post-edit-dart.sh`
+2. Registers it in `.claude/settings.json`
+3. Updates `.claude/CHANGELOG.md`
+4. Opens a PR: "Add PostToolUse hook for automatic Dart fixes"
 
-Run migration verification:
-
-```bash
-bash .claude/ai_automation_scripts/verify-migrations.sh --model=haiku
-```
-
-This:
-1. Creates parallel git worktrees for each migration
-2. Resets each worktree to baseline
-3. Runs migrations in parallel
-4. Verifies expected changes were made
-5. Uses Claude (sonnet) to grade the results (0-100)
-
-## Configuration Files
-
-### `.claude/settings.json`
-
-Creeper manages hook registration:
-
-```json
-{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [{"type": "command", "command": "..."}]
-      }
-    ]
-  }
-}
-```
-
-### `CLAUDE.md`
-
-Creeper maintains:
-- Commands table for slash commands
-- Important Reminders section for user directives
-- Tech stack and project context
-
-### `.claude/CHANGELOG.md`
-
-All automation changes are logged with timestamps.
+Next time you edit a Dart file, it happens automatically.
 
 ## License
 
