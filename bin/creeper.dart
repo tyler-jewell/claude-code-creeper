@@ -22,6 +22,7 @@
 ///   --to=N            Replay up to migration N
 ///   --only=N          Run only migration N
 ///   --confirm         Skip confirmation prompts
+library creeper;
 
 import 'dart:async';
 import 'dart:convert';

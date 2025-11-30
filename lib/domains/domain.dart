@@ -2,6 +2,7 @@
 ///
 /// Domains define specific areas that the creeper can analyze and optimize.
 /// Each domain has its own analysis logic and system prompt.
+library domain;
 
 import '../models/transcript_types.dart';
 

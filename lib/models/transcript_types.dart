@@ -1,6 +1,7 @@
 /// Claude Code Transcript Types
 ///
 /// Typed models for parsing Claude Code session transcripts (.jsonl files)
+library transcript_types;
 
 import 'dart:convert';
 

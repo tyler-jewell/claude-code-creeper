@@ -2,6 +2,7 @@
 ///
 /// Typed Dart models for Claude Code hook inputs and outputs.
 /// Based on: lib/schemas/claude_code_hooks_schema.json
+library hook_types;
 
 // =============================================================================
 // ENUMS

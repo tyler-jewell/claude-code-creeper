@@ -5,6 +5,7 @@
 /// - CLAUDE.md content
 /// - Slash commands
 /// - Skills
+library claude_code_automation;
 
 import '../domain.dart';
 
@@ -214,9 +215,9 @@ description: Short description for command list
 # Command Name
 Instructions for what this command does.
 ## Usage
-\`\`\`bash
+```bash
 command here
-\`\`\`
+```
 ```
 NOTE: Commands are auto-discovered from .claude/commands/ - NO settings.json registration needed!
 MUST also add to CLAUDE.md Commands table: `| /example | Purpose |`
